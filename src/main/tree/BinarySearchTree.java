@@ -1,71 +1,93 @@
 package tree;
 
-import javax.swing.tree.TreeNode;
-
 import estrut.Tree;
 
 public class BinarySearchTree implements Tree {
-
     private TreeNode root;
 
     @Override
     public boolean buscaElemento(int valor) {
-        return buscaElementoRecursivamente(root, valor);
+        return buscaElementoRecursivo(root, valor);
     }
 
-    private boolean buscaElementoRecursivamente(Node node, int valor) {
-        if (node == null)
+    private boolean buscaElementoRecursivo(TreeNode node, int valor) {
+        if (node == null) {
             return false;
+        }
 
-        if (valor == node.value)
+        if (valor == node.data) {
             return true;
-
-        if (valor < node.value)
-            return buscaElementoRecursivamente(node.left, valor);
-        else
-            return buscaElementoRecursivamente(node.right, valor);
+        } else if (valor < node.data) {
+            return buscaElementoRecursivo(node.left, valor);
+        } else {
+            return buscaElementoRecursivo(node.right, valor);
+        }
     }
 
     @Override
     public int minimo() {
-        if (root == null)
-            throw new IllegalStateException("Árvore vazia");
+        if (root == null) {
+            throw new NullPointerException("Árvore vazia");
+        }
 
-        Node currentNode = root;
-        while (currentNode.left != null)
-            currentNode = currentNode.left;
-
-        return currentNode.value;
+        TreeNode current = root;
+        while (current.left != null) {
+            current = current.left;
+        }
+        return current.data;
     }
 
     @Override
     public int maximo() {
-        if (root == null)
-            throw new IllegalStateException("Árvore vazia");
+        if (root == null) {
+            throw new NullPointerException("Árvore vazia");
+        }
 
-        Node currentNode = root;
-        while (currentNode.right != null)
-            currentNode = currentNode.right;
-
-        return currentNode.value;
+        TreeNode current = root;
+        while (current.right != null) {
+            current = current.right;
+        }
+        return current.data;
     }
 
     @Override
     public void insereElemento(int valor) {
-        root = inserirRecursivamente(root, valor);
+        root = inserirRecursivo(root, valor);
     }
 
-    private Node inserirRecursivamente(Node node, int valor) {
-        if (node == null)
-            return new Node(valor);
+    private TreeNode inserirRecursivo(TreeNode node, int valor) {
+        if (node == null) {
+            return new TreeNode(valor);
+        }
 
-        if (valor < node.value) {
-            node.left = inserirRecursivamente(node.left, valor);
-        } else if (valor > node.value) {
-            node.right = inserirRecursivamente(node.right, valor);
-        } else {
-            // Valor já existe na árvore, não fazemos nada
-            return node;
+        if (valor < node.data) {
+            node.left = inserirRecursivo(node.left, valor);
+        } else if (valor > node.data) {
+            node.right = inserirRecursivo(node.right, valor);
+        }
+
+        // Atualizar altura do nó
+        node.altura = 1 + Math.max(getAltura(node.left), getAltura(node.right));
+
+        // Verificar balanceamento e rotacionar se necessário
+        int balance = getBalance(node);
+
+        if (balance > 1 && valor < node.left.data) {
+            return rotacaoDireita(node);
+        }
+
+        if (balance < -1 && valor > node.right.data) {
+            return rotacaoEsquerda(node);
+        }
+
+        if (balance > 1 && valor > node.left.data) {
+            node.left = rotacaoEsquerda(node.left);
+            return rotacaoDireita(node);
+        }
+
+        if (balance < -1 && valor < node.right.data) {
+            node.right = rotacaoDireita(node.right);
+            return rotacaoEsquerda(node);
         }
 
         return node;
@@ -73,103 +95,191 @@ public class BinarySearchTree implements Tree {
 
     @Override
     public void remove(int valor) {
-        root = removerRecursivamente(root, valor);
+        root = removerRecursivo(root, valor);
     }
 
-    private Node removerRecursivamente(Node node, int valor) {
-        if (node == null)
+    private TreeNode removerRecursivo(TreeNode node, int valor) {
+        if (node == null) {
             return node;
+        }
 
-        if (valor < node.value) {
-            node.left = removerRecursivamente(node.left, valor);
-        } else if (valor > node.value) {
-            node.right = removerRecursivamente(node.right, valor);
+        if (valor < node.data) {
+            node.left = removerRecursivo(node.left, valor);
+        } else if (valor > node.data) {
+            node.right = removerRecursivo(node.right, valor);
         } else {
-            // Nó a ser removido
-            if (node.left == null)
-                return node.right;
-            else if (node.right == null)
-                return node.left;
+            if (node.left == null || node.right == null) {
+                TreeNode temp = null;
+                if (temp == node.left) {
+                    temp = node.right;
+                } else {
+                    temp = node.left;
+                }
 
-            // Nó com dois filhos
-            node.value = minimo(node.right);
+                if (temp == null) {
+                    temp = node;
+                    node = null;
+                } else {
+                    node = temp;
+                }
+            } else {
+                TreeNode temp = minValueNode(node.right);
+                node.data = temp.data;
+                node.right = removerRecursivo(node.right, temp.data);
+            }
+        }
 
-            node.right = removerRecursivamente(node.right, node.value);
+        if (node == null) {
+            return node;
+        }
+
+        node.altura = 1 + Math.max(getAltura(node.left), getAltura(node.right));
+
+        int balance = getBalance(node);
+
+        if (balance > 1 && getBalance(node.left) >= 0) {
+            return rotacaoDireita(node);
+        }
+
+        if (balance > 1 && getBalance(node.left) < 0) {
+            node.left = rotacaoEsquerda(node.left);
+            return rotacaoDireita(node);
+        }
+
+        if (balance < -1 && getBalance(node.right) <= 0) {
+            return rotacaoEsquerda(node);
+        }
+
+        if (balance < -1 && getBalance(node.right) > 0) {
+            node.right = rotacaoDireita(node.right);
+            return rotacaoEsquerda(node);
         }
 
         return node;
     }
 
-    private int minimo(Node node) {
-        int min = node.value;
-        while (node.left != null) {
-            min = node.left.value;
-            node = node.left;
+    private TreeNode minValueNode(TreeNode node) {
+        TreeNode current = node;
+        while (current.left != null) {
+            current = current.left;
         }
-        return min;
+        return current;
+    }
+
+    private TreeNode rotacaoDireita(TreeNode y) {
+        TreeNode x = y.left;
+        TreeNode T = x.right;
+
+        x.right = y;
+        y.left = T;
+
+        y.altura = Math.max(getAltura(y.left), getAltura(y.right)) + 1;
+        x.altura = Math.max(getAltura(x.left), getAltura(x.right)) + 1;
+
+        return x;
+    }
+
+    private TreeNode rotacaoEsquerda(TreeNode x) {
+        TreeNode y = x.right;
+        TreeNode T = y.left;
+
+        y.left = x;
+        x.right = T;
+
+        x.altura = Math.max(getAltura(x.left), getAltura(x.right)) + 1;
+        y.altura = Math.max(getAltura(y.left), getAltura(y.right)) + 1;
+
+        return y;
+    }
+
+    private int getAltura(TreeNode node) {
+        if (node == null) {
+            return 0;
+        }
+        return node.altura;
+    }
+
+    private int getBalance(TreeNode node) {
+        if (node == null) {
+            return 0;
+        }
+        return getAltura(node.left) - getAltura(node.right);
     }
 
     @Override
     public int[] preOrdem() {
-        int[] result = new int[countNodes(root)];
-        preOrdemRecursivo(root, result, 0);
-        return result;
+        return preOrdemRecursivo(root);
     }
 
-    private int preOrdemRecursivo(Node node, int[] result, int index) {
-        if (node == null)
-            return index;
+    private int[] preOrdemRecursivo(TreeNode node) {
+        if (node == null) {
+            return new int[] {};
+        }
 
-        result[index++] = node.value;
-        index = preOrdemRecursivo(node.left, result, index);
-        index = preOrdemRecursivo(node.right, result, index);
-        return index;
+        int[] leftArray = preOrdemRecursivo(node.left);
+        int[] rightArray = preOrdemRecursivo(node.right);
+        int[] result = new int[leftArray.length + rightArray.length + 1];
+
+        result[0] = node.data;
+        System.arraycopy(leftArray, 0, result, 1, leftArray.length);
+        System.arraycopy(rightArray, 0, result, leftArray.length + 1, rightArray.length);
+
+        return result;
     }
 
     @Override
     public int[] emOrdem() {
-        int[] result = new int[countNodes(root)];
-        emOrdemRecursivo(root, result, 0);
-        return result;
+        return emOrdemRecursivo(root);
     }
 
-    private int emOrdemRecursivo(Node node, int[] result, int index) {
-        if (node == null)
-            return index;
+    private int[] emOrdemRecursivo(TreeNode node) {
+        if (node == null) {
+            return new int[] {};
+        }
 
-        index = emOrdemRecursivo(node.left, result, index);
-        result[index++] = node.value;
-        index = emOrdemRecursivo(node.right, result, index);
-        return index;
+        int[] leftArray = emOrdemRecursivo(node.left);
+        int[] rightArray = emOrdemRecursivo(node.right);
+        int[] result = new int[leftArray.length + rightArray.length + 1];
+
+        System.arraycopy(leftArray, 0, result, 0, leftArray.length);
+        result[leftArray.length] = node.data;
+        System.arraycopy(rightArray, 0, result, leftArray.length + 1, rightArray.length);
+
+        return result;
     }
 
     @Override
     public int[] posOrdem() {
-        int[] result = new int[countNodes(root)];
-        posOrdemRecursivo(root, result, 0);
+        return posOrdemRecursivo(root);
+    }
+
+    private int[] posOrdemRecursivo(TreeNode node) {
+        if (node == null) {
+            return new int[] {};
+        }
+
+        int[] leftArray = posOrdemRecursivo(node.left);
+        int[] rightArray = posOrdemRecursivo(node.right);
+        int[] result = new int[leftArray.length + rightArray.length + 1];
+
+        System.arraycopy(leftArray, 0, result, 0, leftArray.length);
+        System.arraycopy(rightArray, 0, result, leftArray.length, rightArray.length);
+        result[leftArray.length + rightArray.length] = node.data;
+
         return result;
     }
-
-    private int posOrdemRecursivo(Node node, int[] result, int index) {
-        if (node == null)
-            return index;
-
-        index = posOrdemRecursivo(node.left, result, index);
-        index = posOrdemRecursivo(node.right, result, index);
-        result[index++] = node.value;
-        return index;
-    }
-
 }
 
-class TreeNode{
+class TreeNode {
     int data;
     TreeNode left;
     TreeNode right;
+    int altura;
 
-public TreeNode(int data){
-    this.data = data;
-    left = null;
-    right = null;
-}
+    public TreeNode(int data) {
+        this.data = data;
+        this.altura = 1;
+        left = null;
+        right = null;
+    }
 }
